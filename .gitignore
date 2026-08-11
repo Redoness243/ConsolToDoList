@@ -1,0 +1,9 @@
+bin/
+obj/
+.db
+.sqlite
+sql.db
+.vscode
+.idea
+.user
+sql.sqbpro
