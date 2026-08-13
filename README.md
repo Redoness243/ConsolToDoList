@@ -22,3 +22,5 @@ A console-based task management application built with C# and SQLite (`Microsoft
 2. Run the following command:
    ```bash
    dotnet run
+
+   Note: new feature is coming.
