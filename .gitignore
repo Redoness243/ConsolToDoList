@@ -1,9 +1,7 @@
 bin/
 obj/
-.db
-.sqlite
-sql.db
-.vscode
-.idea
-.user
-sql.sqbpro
+*.db
+*.db-journal
+*.sqbpro
+tasks.json
+.vscode/
