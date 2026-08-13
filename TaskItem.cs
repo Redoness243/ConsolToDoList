@@ -23,3 +23,5 @@ class TaskItem
         CreatedAt = DateTime.Now;
     }
 }
+
+// Task model representing a single item.
