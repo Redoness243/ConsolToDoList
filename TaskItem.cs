@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Xml;
 
-class TaskItem
+public class TaskItem
 {
     public string Title { get; set; }
     public bool IsCompleted { get; set; }
@@ -12,9 +12,9 @@ class TaskItem
     public Categories CategoryOptions { get; set; }
     public string CategoryName { get; set; } = string.Empty;
     public override string ToString()
-{
-    return $"{PriorityOptions} - {Title} [{(IsCompleted ? "X" : " ")}] (Created: {CreatedAt:g})";
-}
+    {
+        return $"{PriorityOptions} - {Title} [{(IsCompleted ? "X" : " ")}] (Created: {CreatedAt:g})";
+    }
 
     public TaskItem(string title)
     {

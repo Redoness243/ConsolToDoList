@@ -1,29 +1,33 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Microsoft.Data.Sqlite;
+using Microsoft.VisualBasic;
+using System.Linq;
 
 partial class Program
 {
-    static void ViewTasks(List<TaskItem> tasks)
+    static void ViewTasks(TaskManager tasks)
     {
-        foreach (var t in tasks.Where(t => !t.IsCompleted))
+        var taskList = tasks.GetAll();
+        foreach (var t in taskList.Where(t => !t.IsCompleted))
         {
             Console.WriteLine(t.Title);
         }
-        Console.WriteLine(tasks.Count(t => t.IsCompleted));
+        Console.WriteLine(taskList.Count(t => t.IsCompleted));
 
         Console.WriteLine("Current tasks:");
-        foreach (var task in tasks)
+        foreach (var task in taskList)
         {
             Console.WriteLine(task);
         }
-        if (tasks.Count == 0)
+        if (taskList.Count == 0)
         {
             Console.WriteLine("No tasks available.");
         }
     }
-
-    static void AddTask(List<TaskItem> tasks)
+    static void AddTask(TaskManager tasks)
     {
+        var taskList = tasks.GetAll();
         Console.WriteLine("Enter a task to add:");
         string? newTask = Console.ReadLine();
         if (string.IsNullOrWhiteSpace(newTask))
@@ -32,20 +36,21 @@ partial class Program
             return;
         }
 
-        TaskItem taskItem = new TaskItem(newTask);
+
         Console.WriteLine("Enter a priority: \n1.Low \n2.Medium \n3.High");
         string? priorityInput = Console.ReadLine();
+        TaskItem.Priority priority;
 
         switch (priorityInput)
         {
             case "1":
-                taskItem.PriorityOptions = TaskItem.Priority.Low;
+                priority = TaskItem.Priority.Low;
                 break;
             case "2":
-                taskItem.PriorityOptions = TaskItem.Priority.Medium;
+                priority = TaskItem.Priority.Medium;
                 break;
             case "3":
-                taskItem.PriorityOptions = TaskItem.Priority.High;
+                priority = TaskItem.Priority.High;
                 break;
             default:
                 Console.WriteLine("Invalid option. Please select a valid option (1-3).");
@@ -54,36 +59,41 @@ partial class Program
 
         Console.WriteLine("Select a category: \n1.Business \n2.Personal \n3.Educational");
         string? categoryInput = Console.ReadLine();
+        TaskItem.Categories category;
         switch (categoryInput)
         {
             case "1":
-                taskItem.CategoryOptions = TaskItem.Categories.Business;
+                category = TaskItem.Categories.Business;
                 break;
             case "2":
-                taskItem.CategoryOptions = TaskItem.Categories.Personal;
+                category = TaskItem.Categories.Personal;
                 break;
             case "3":
-                taskItem.CategoryOptions = TaskItem.Categories.Educational;
+                category = TaskItem.Categories.Educational;
                 break;
             default:
                 Console.WriteLine("Invalid option. Please select a valid option (1-3).");
                 return;
         }
 
-        tasks.Add(taskItem);
+        tasks.AddTask(newTask);
+        var addedTask = tasks.GetAll().Last();
+        addedTask.PriorityOptions = priority;
+        addedTask.CategoryOptions = category;
         ITaskRepository repository = new SqlTaskRepository();
-        repository.Save(tasks);
-        Console.WriteLine($"Task '{newTask}' added, it is priority is: '{taskItem.PriorityOptions}' and it is category is: '{taskItem.CategoryOptions}.");
+        repository.Save(tasks.GetAll().ToList());
+        Console.WriteLine($"Task '{newTask}' added, it is priority is: '{priority}' and it is category is: '{category}.");
     }
-
-    static void RemoveTask(List<TaskItem> tasks)
+    static void RemoveTask(TaskManager tasks)
     {
-        if (tasks.Count > 0)
+        var taskList = tasks.GetAll();
+
+        if (taskList.Count > 0)
         {
             Console.WriteLine("Enter the task number to remove:");
-            for (int i = 0; i < tasks.Count; i++)
+            for (int i = 1; i < taskList.Count; i++)
             {
-                Console.WriteLine($"{i + 1}. {tasks[i].Title}");
+                Console.WriteLine($"{i + 1}. {taskList[i].Title}");
             }
         }
         else
@@ -93,10 +103,10 @@ partial class Program
         }
 
         string? taskNumberInput = Console.ReadLine();
-        if (int.TryParse(taskNumberInput, out int taskNumber) && taskNumber > 0 && taskNumber <= tasks.Count)
+        if (int.TryParse(taskNumberInput, out int taskNumber) && taskNumber > 0 && taskNumber <= taskList.Count)
         {
-            TaskItem removedTask = tasks[taskNumber - 1];
-            tasks.RemoveAt(taskNumber - 1);
+            TaskItem removedTask = taskList[taskNumber - 1];
+            tasks.RemoveTask(taskNumber - 1);
             Console.WriteLine($"Task '{removedTask.Title}' removed.");
         }
         else
@@ -104,48 +114,50 @@ partial class Program
             Console.WriteLine("Invalid task number.");
         }
         ITaskRepository repository = new SqlTaskRepository();
-        repository.Save(tasks);
+        repository.Save(tasks.GetAll().ToList());
     }
-
-    static void MarkTaskAsCompleted(List<TaskItem> tasks)
+    static void MarkTaskAsCompleted(TaskManager tasks)
     {
-        if (tasks.Count == 0)
+        var taskList = tasks.GetAll();
+        if (taskList.Count == 0)
         {
             Console.WriteLine("No tasks available.");
             return;
         }
         Console.WriteLine("Enter the task number to mark as completed:");
-        for (int i = 0; i < tasks.Count; i++)
+        for (int i = 0; i < taskList.Count; i++)
         {
-            Console.WriteLine($"{i + 1}. {tasks[i].Title} [{(tasks[i].IsCompleted ? "X" : " ")}]");
+            Console.WriteLine($"{i + 1}. {taskList[i].Title} [{(taskList[i].IsCompleted ? "X" : " ")}]");
         }
         string? taskNumberInput = Console.ReadLine();
-        if (int.TryParse(taskNumberInput, out int taskNumber) && taskNumber > 0 && taskNumber <= tasks.Count)
+        if (int.TryParse(taskNumberInput, out int taskNumber) && taskNumber > 0 && taskNumber <= taskList.Count)
         {
-            tasks[taskNumber - 1].IsCompleted = true;
-            Console.WriteLine($"Task '{tasks[taskNumber - 1].Title}' marked as completed.");
+            taskList[taskNumber - 1].IsCompleted = true;
+            tasks.CompleteTask(taskNumber - 1);
+            Console.WriteLine($"Task '{taskList[taskNumber - 1].Title}' marked as completed.");
         }
         else
         {
             Console.WriteLine("Invalid task number.");
         }
         ITaskRepository repository = new SqlTaskRepository();
-        repository.Save(tasks);
+        repository.Save(tasks.GetAll().ToList());
     }
-    static void Sort_Filter(List<TaskItem> tasks)
+    static void Sort_Filter(TaskManager tasks)
     {
+        var taskList = tasks.GetAll();
         Console.WriteLine("Choose a sort/filter type: \n1.Date \n2.High Priority");
         string? sort_filter = Console.ReadLine();
         switch (sort_filter)
         {
             case "1":
-                foreach (var task in tasks.OrderBy(t => t.CreatedAt))
+                foreach (var task in taskList.OrderBy(t => t.CreatedAt))
                 {
                     Console.WriteLine(task);
                 }
                 break;
             case "2":
-                foreach (var task in tasks.Where(t => t.PriorityOptions == TaskItem.Priority.High))
+                foreach (var task in taskList.Where(t => t.PriorityOptions == TaskItem.Priority.High))
                     Console.WriteLine(task);
                 break;
             default:
@@ -154,14 +166,15 @@ partial class Program
         }
     }
 
-    static void EditTask(List<TaskItem> tasks)
+    static void EditTask(TaskManager tasks)
     {
-        if (tasks.Count > 0)
+        var taskList = tasks.GetAll();
+        if (taskList.Count > 0)
         {
             Console.WriteLine("Enter the task number to update:");
-            for (int i = 0; i < tasks.Count; i++)
+            for (int i = 0; i < taskList.Count; i++)
             {
-                Console.WriteLine($"{i + 1}. {tasks[i].Title}");
+                Console.WriteLine($"{i + 1}. {taskList[i].Title}");
             }
         }
         else
@@ -171,9 +184,9 @@ partial class Program
         }
 
         string? taskNumberUpdate = Console.ReadLine();
-        if (int.TryParse(taskNumberUpdate, out int taskNumber) && taskNumber > 0 && taskNumber <= tasks.Count)
+        if (int.TryParse(taskNumberUpdate, out int taskNumber) && taskNumber > 0 && taskNumber <= taskList.Count)
         {
-            TaskItem updatedTask = tasks[taskNumber - 1];
+            TaskItem updatedTask = taskList[taskNumber - 1];
             Console.WriteLine($"Current title: {updatedTask.Title}");
             Console.WriteLine("Enter new value (leave empty to keep current):");
             string? newTitle = Console.ReadLine();
@@ -219,16 +232,31 @@ partial class Program
             Console.WriteLine("Invalid task number.");
         }
         ITaskRepository repository = new SqlTaskRepository();
-        repository.Save(tasks);
+        repository.Save(tasks.GetAll().ToList());
     }
 
     static void Main(string[] args)
     {
         ITaskRepository repository = new SqlTaskRepository();
-        List<TaskItem> taskList = new List<TaskItem>();
+        TaskManager taskManager = new TaskManager();
+
         try
         {
-            taskList = repository.Load();
+            var loadedTasks = repository.Load();
+
+            foreach (var item in loadedTasks)
+            {
+                taskManager.AddTask(item.Title);
+                var currentTask = taskManager.GetAll().Last();
+                currentTask.PriorityOptions = item.PriorityOptions;
+                currentTask.CategoryOptions = item.CategoryOptions;
+                currentTask.CreatedAt = item.CreatedAt;
+
+                if (item.IsCompleted)
+                {
+                    taskManager.CompleteTask(taskManager.GetAll().Count - 1);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -255,25 +283,25 @@ partial class Program
             switch (taskListOptions)
             {
                 case "1":
-                    ViewTasks(taskList);
+                    ViewTasks(taskManager);
                     break;
                 case "2":
-                    AddTask(taskList);
+                    AddTask(taskManager);
                     break;
                 case "3":
-                    RemoveTask(taskList);
+                    RemoveTask(taskManager);
                     break;
                 case "4":
                     Console.WriteLine("Exiting the program.");
                     return;
                 case "5":
-                    MarkTaskAsCompleted(taskList);
+                    MarkTaskAsCompleted(taskManager);
                     break;
                 case "6":
-                    Sort_Filter(taskList);
+                    Sort_Filter(taskManager);
                     break;
                 case "7":
-                    EditTask(taskList);
+                    EditTask(taskManager);
                     break;
                 default:
                     Console.WriteLine("Invalid option. Please select a valid option (1-7).");

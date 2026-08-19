@@ -3,14 +3,32 @@ using System.Data;
 using Microsoft.Data.Sqlite;
 using System.Net.Mail;
 
-class SqlTaskRepository : ITaskRepository
+public class SqlTaskRepository : ITaskRepository
 {
+    private readonly string _connectionString;
+
+    public SqlTaskRepository(string connectionString = "Data Source=tasks.db")
+    {
+        _connectionString = connectionString;
+    }
 
     public List<TaskItem> Load()
     {
-        using var connection = new SqliteConnection("Data Source=sql.db");
+        using var connection = new SqliteConnection(_connectionString);
         List<TaskItem> taskList = new List<TaskItem>();
         connection.Open();
+
+        var createCommand = connection.CreateCommand();
+        createCommand.CommandText = @"
+        CREATE TABLE IF NOT EXISTS Tasks (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Title TEXT NOT NULL,
+        IsCompleted INTEGER NOT NULL,
+        Priority TEXT NOT NULL,
+        CreatedAt TEXT NOT NULL,
+        CategoryId INTEGER NOT NULL
+        )";
+        createCommand.ExecuteNonQuery();
 
         var command = connection.CreateCommand();
         command.CommandText = "SELECT * FROM Tasks";
@@ -32,8 +50,20 @@ class SqlTaskRepository : ITaskRepository
 
     public void Save(List<TaskItem> tasks)
     {
-        using var connection = new SqliteConnection("Data Source=sql.db");
+        using var connection = new SqliteConnection(_connectionString);
         connection.Open();
+
+        var createCommand = connection.CreateCommand();
+        createCommand.CommandText = @"
+        CREATE TABLE IF NOT EXISTS Tasks (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Title TEXT NOT NULL,
+        IsCompleted INTEGER NOT NULL,
+        Priority TEXT NOT NULL,
+        CreatedAt TEXT NOT NULL,
+        CategoryId INTEGER NOT NULL
+        )";
+        createCommand.ExecuteNonQuery();
 
         using var transaction = connection.BeginTransaction();
         var deleteCommand = connection.CreateCommand();
