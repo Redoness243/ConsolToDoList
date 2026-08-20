@@ -27,3 +27,4 @@ jobs:
 
     - name: Run Tests
       run: dotnet test consoleApp.Tests --no-build --verbosity normal
+# trigger run
