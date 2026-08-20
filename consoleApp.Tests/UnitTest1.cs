@@ -15,7 +15,7 @@ public class UnitTest1
     public void NewTask_ShouldHaveCorrectTitle()
     {
         var task = new TaskItem("Süt al");
-        Assert.Equal("Süt al", task.Title);
+        Assert.Equal("Ekmek al", task.Title);
     }
 
     [Fact]
